@@ -1,0 +1,1416 @@
+{
+  "name": "Credit Underwriting",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "209ec7e1-07c0-48d2-bb32-18ea32dc3109",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -740,
+        120
+      ],
+      "id": "80265044-962e-443e-b821-155f50ee353b",
+      "name": "Webhook",
+      "webhookId": "209ec7e1-07c0-48d2-bb32-18ea32dc3109"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://uat-sso.ctos.com.my/auth/realms/CTOSNET/protocol/openid-connect/token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "text/xml"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "password"
+            },
+            {
+              "name": "client_id",
+              "value": "Ryt2_jwt"
+            },
+            {
+              "name": "username",
+              "value": "ryt2_uat"
+            },
+            {
+              "name": "password",
+              "value": "Ryt2b@nk_2025"
+            },
+            {
+              "name": "client_assertion_type",
+              "value": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+            },
+            {
+              "name": "client_assertion",
+              "value": "={{ $json.stdout }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3360,
+        520
+      ],
+      "id": "f9ade287-697b-4ce9-8b04-6ce230af874c",
+      "name": "Login CTOS"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://uat-integration.ctos.com.my/ctos_secure/Proxy",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/xml",
+        "body": "=<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ws=\"http://ws.proxy.xml.ctos.com.my/\">\n\n   <soapenv:Header/>\n\n   <soapenv:Body>\n\n      <ws:request>\n\n         <!--Optional:-->\n\n         <input>\n\n&lt;batch output=&apos;0&apos; no=&apos;061128&apos; xmlns=&apos;http://ws.cmctos.com.my/ctosnet/request&apos;&gt;\n\n&lt;company_code&gt;RYT2UAT&lt;/company_code&gt;\n\n&lt;account_no&gt;RYT2UAT&lt;/account_no&gt;\n\n&lt;user_id&gt;ryt2_uat&lt;/user_id&gt;\n\n &lt;record_total&gt;1&lt;/record_total&gt;\n\n&lt;records&gt;\n\n&lt;type code=&quot;11&quot;&gt;I&lt;/type&gt;\n\n&lt;ic_lc&gt;&lt;/ic_lc&gt;\n\n&lt;nic_br&gt;{{ $('Webhook').first().json.body[0].idNumber }}&lt;/nic_br&gt;\n\n    &lt;name&gt;{{ $('Webhook').first().json.body[0].fullName }}&lt;/name&gt;\n\n    &lt;mphone_nos/&gt;\n\n    &lt;ref_no&gt;061128&lt;/ref_no&gt;\n\n    &lt;purpose code=&apos;200&apos;&gt;Credit evaluation/account opening on subject/directors/shareholder with consent /due diligence on AMLA compliance&lt;/purpose&gt;\n\n    &lt;include_ccris sum=&quot;0&quot;&gt;1&lt;/include_ccris&gt;\n\n    &lt;include_ctos&gt;1&lt;/include_ctos&gt;\n\n    &lt;include_ccris_supp&gt;1&lt;/include_ccris_supp&gt;\n\n    &lt;include_dcheq&gt;0&lt;/include_dcheq&gt;  \n\n    &lt;include_ssm&gt;0&lt;/include_ssm&gt;\n\n    &lt;include_trex&gt;1&lt;/include_trex&gt;\n\n    &lt;include_fico&gt;1&lt;/include_fico&gt;\n\n    &lt;include_ci&gt;0&lt;/include_ci&gt;\n\n    &lt;include_ie&gt;1&lt;/include_ie&gt;\n\n    &lt;include_etr_plus&gt;0&lt;/include_etr_plus&gt;\n\n    &lt;include_consent&gt;0&lt;/include_consent&gt;\n\n    &lt;include_angkasa&gt;0&lt;/include_angkasa&gt;\n\n    &lt;include_sfi&gt;0&lt;/include_sfi&gt;\n\n    &lt;confirm_entity&gt;&lt;/confirm_entity&gt;\n\n  &lt;/records&gt;\n\n&lt;/batch&gt;\n\n        </input>\n\n      </ws:request>\n\n   </soapenv:Body>\n\n</soapenv:Envelope>",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3600,
+        520
+      ],
+      "id": "84460a1f-d0b2-48c3-aba4-6f1f5282de81",
+      "name": "Get Individual Report from CTOS"
+    },
+    {
+      "parameters": {
+        "jsCode": "function getCrPositionsForSingleMonth(report) {\n  const account = report?.report?.enq_report?.enquiry?.section_ccris?.accounts?.account;\n  if (!account) return [];\n\n  const subAccounts = Array.isArray(account.sub_accounts?.sub_account)\n    ? account.sub_accounts.sub_account\n    : [account.sub_accounts?.sub_account];\n\n  const selectedMonth = { month: null, year: null };\n  const filteredPositions = [];\n\n  for (const sub of subAccounts) {\n    const crPositions = sub?.cr_positions?.cr_position;\n    if (!crPositions) continue;\n\n    const positions = Array.isArray(crPositions) ? crPositions : [crPositions];\n\n    for (const pos of positions) {\n      const dateStr = pos?.position_date;\n      if (!dateStr) continue;\n\n      const [day, mo, yr] = dateStr.split(\"-\").map(n => parseInt(n));\n\n      if (!selectedMonth.month && !selectedMonth.year) {\n        selectedMonth.month = mo;\n        selectedMonth.year = yr;\n      }\n\n      if (mo === selectedMonth.month && yr === selectedMonth.year) {\n        filteredPositions.push(pos);\n      }\n\n      break; // Only one month per sub_account\n    }\n  }\n\n  return filteredPositions;\n}\n\nfunction getDSR(report) {\n  const positions = getCrPositionsForSingleMonth(report);\n  let total = 0;\n\n  for (const pos of positions) {\n    const amt = parseFloat(pos?.inst_amount);\n    if (!isNaN(amt)) total += amt;\n  }\n\n  return total > 0 ? total / $('Webhook').first().json.body[0].monthlyIncome : null;\n}\n\nfunction hasCreditDPD(report) {\n  const arrears = parseInt(\n    report?.report?.enq_report?.enquiry?.section_summary?.ccris?.facility?.arrears || \"0\"\n  );\n  return arrears > 0;\n}\n\nfunction hasActiveRestructuredLoan(report) {\n  const positions = getCrPositionsForSingleMonth(report);\n\n  return positions.some(pos =>\n    pos?.status?.code === \"T\" && parseFloat(pos?.balance) > 0\n  );\n}\n\nfunction hasWriteOffInLast3Years(report) {\n  const positions = getCrPositionsForSingleMonth(report);\n  const cutoff = new Date();\n  cutoff.setFullYear(cutoff.getFullYear() - 3);\n\n  return positions.some(pos => {\n    if (pos?.status?.code !== \"W\") return false;\n\n    const [day, mo, yr] = (pos?.position_date || \"\").split(\"-\").map(n => parseInt(n));\n    const positionDate = new Date(yr, mo - 1, day);\n    return positionDate > cutoff;\n  });\n}\n\nfunction isBankruptLast5Years(report) {\n  const bankruptcy = report?.report?.enq_report?.enquiry?.section_summary?.ctos?.bankruptcy;\n  if (!bankruptcy || bankruptcy.status === \"1\") return false;\n\n  const dateStr = bankruptcy?.order_date;\n  if (!dateStr) return false;\n\n  const [day, mo, yr] = dateStr.split(\"-\").map(n => parseInt(n));\n  const orderDate = new Date(yr, mo - 1, day);\n\n  const cutoff = new Date();\n  cutoff.setFullYear(cutoff.getFullYear() - 5);\n\n  return orderDate > cutoff;\n}\n\n\nconst items = $input.all(); // returns an array of all input \nitems.map(item => {\n\n  if (item.json.report) {\n    const report = $input.first().json;\n\n    // Run all calculations\n    item.json.dsr = getDSR(report);\n    item.json.hasCreditDPD = hasCreditDPD(report);\n    item.json.hasRestructuredLoan = hasActiveRestructuredLoan(report);\n    item.json.hasWriteOffLast3Yrs = hasWriteOffInLast3Years(report);\n    item.json.recentBankruptcy = isBankruptLast5Years(report);\n\n  }  \n});\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        2560
+      ],
+      "id": "3dfbc1b8-6259-457f-b148-2dafbb7d1162",
+      "name": "Calculation Rule"
+    },
+    {
+      "parameters": {
+        "command": "sh /home/node/scripts/generate-jwt.sh"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        3080,
+        520
+      ],
+      "id": "e01171da-cf21-45a8-88fb-8d4679db2cb8",
+      "name": "Generate Signed JWT"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.all()[0];\n\nconst {\n  dsr,\n  hasCreditDPD,\n  hasRestructuredLoan,\n  hasWriteOffLast3Yrs,\n  recentBankruptcy,\n} = item.json;\n\nconst shouldReject =\n  (dsr !== null && dsr > 0.7) ||\n  hasCreditDPD === true ||\n  hasRestructuredLoan === true ||\n  hasWriteOffLast3Yrs === true ||\n  recentBankruptcy === true;\n\nitem.json.decision = shouldReject ? \"rejected\" : \"approved\";\n\nreturn item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2380,
+        2480
+      ],
+      "id": "199361c8-55dd-4a3c-b64f-f35c3814d7cc",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('Set Response - RAC Check').item.json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        9220,
+        1100
+      ],
+      "id": "59d358d3-a90b-48c0-9ea5-04d3b310abc5",
+      "name": "Respond Credit Rules Result"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('Set Response - Failed Profile Check').item.json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        1560,
+        -380
+      ],
+      "id": "f0080f5e-cb95-456d-b551-4617b0661c6b",
+      "name": "Respond Failed Profile Rules Result",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const ficoScore =  Number($('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.summary.enq_sum.fico_index.score);\n\nconst ficoScoreThreshold = 560;\n\nconst passed = ficoScore > ficoScoreThreshold;\nconst reason = passed ? null : \"Fico score below \" + ficoScoreThreshold;\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"ficoScore\",\n  \"value\": ficoScore\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R017 - CTOS Score Threshold\"\n}\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        1760
+      ],
+      "id": "6509ffa4-2065-4ed5-8cdf-d6600935bcd9",
+      "name": "R017 - CTOS Score Threshold"
+    },
+    {
+      "parameters": {
+        "jsCode": "const legalStatusToReject = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];\n\nconst specialAttentionAccounts =  $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris?.special_attention_accs;\nconst accountLegal = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris.accounts.account?.legal;\n\nvar passed = true;\nvar specialAttentionAccountStatus = null;\nvar accountLegalStatus = null;\nvar reason = null;\n\nif(specialAttentionAccounts && legalStatusToReject.includes(Number(specialAttentionAccounts.special_attention_acc.legal.status))) {\n  specialAttentionAccountStatus = Number(specialAttentionAccounts.special_attention_acc.legal.status);\n  passed = false;\n  reason = \"Special Attention Account Legal Status Failed Check\";\n  \n}\n\nif(accountLegal && accountLegal?.status && legalStatusToReject.includes(Number(accountLegal.status))) {\n  accountLegalStatus = Number(accountLegal.status);\n  passed = false;\n  reason = \" Account Legal Status Failed Check\";\n}\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"specialAttentionAccountStatus\",\n  \"value\": specialAttentionAccountStatus\n})\n\nmetadata.push({\n  \"key\": \"accountLegalStatus\",\n  \"value\": accountLegalStatus\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R018 - Legal Status Check\"\n}\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        1940
+      ],
+      "id": "6c3f94d1-a5ea-4f3d-8345-93bdafd1b440",
+      "name": "R018 - Legal Status Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const specialAttention =  $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_summary.ccris?.special_attention;\n\nvar passed = true;\nvar accountStatus = null;\nvar reason = null;\n\n\nif (specialAttention) {\n  accountStatus = Number(specialAttention.accounts);\n  if(accountStatus === 1) {\n    passed = false;\n    reason = \"Failed Special Attention Account Check\"\n  }\n}\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"accountStatus\",\n  \"value\": accountStatus\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R018 - Legal Status Check\"\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        2080
+      ],
+      "id": "36e56415-a026-4044-987f-54b347f46fcf",
+      "name": "R019 - Special Attention Account Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const statusCodes = ['O', 'T', 'C', 'G', 'K', 'J', 'L'];\n\nvar totalMonthlyCommitment = 0;\n\nconst crPositions = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris.accounts.account.sub_accounts.sub_account.cr_positions.cr_position;\n\nfor(var i=0; i < crPositions.length; i++) {\n  if(statusCodes.includes(crPositions[i].status.code)) {\n    totalMonthlyCommitment = totalMonthlyCommitment + Number(crPositions[i].inst_amount);\n  }\n}\n\nconst passed = true;\nconst reason = passed ? null : \"failed r20\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"totalMonthlyCommitment\",\n  \"value\": totalMonthlyCommitment\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R020 - Net Remaining Income\"\n}\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        2260
+      ],
+      "id": "beb430f6-6211-4d11-a746-2c3d3a95f07f",
+      "name": "R020 - Net Remaining Income"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2360,
+        -280
+      ],
+      "id": "eee728c7-a9e5-4e9a-bc04-4732eb8f0a85",
+      "name": "R006 - Debt Service Ratio Eligibility Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const arrears = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_summary.ccris.facility.arrears;\nconst arrearsNumber = Number(arrears);\nconst passed = arrearsNumber === 0;\nconst reason = passed ? null : \"DPD status is 1+ days past due with other banks\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"ccrisFacilityArreas\",\n  \"value\": arrearsNumber\n})\n\nreturn {\n    \"metadata\": metadata,\n    \"passed\": passed,\n    \"reason\":  reason,\n    \"name\": \"R007 - Other Bank Credit Status 1+DPD Check\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        -100
+      ],
+      "id": "b2a1a475-3ad3-426f-bac1-84dbb6746ba2",
+      "name": "R007 - Other Bank Credit Status 1+DPD Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crPositionBalance = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris.accounts.account.sub_accounts.sub_account.cr_positions.cr_position[0].balance;\n\nconst crPositionBalanceNumber = Number(crPositionBalance);\n\nconst crPositionStatusCode = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris.accounts.account.sub_accounts.sub_account.cr_positions.cr_position[0].status.code;\n\nconst passed = !(crPositionBalanceNumber > 0 && (crPositionStatusCode === 'T' || crPositionStatusCode === 'K'));\nconst reason = passed ? null : \"Applicant has restructured loan in CCRIS\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"crPositionBalance\",\n  \"value\": crPositionBalanceNumber\n})\n\nmetadata.push({\n  \"key\": \"crPositionStatusCode\",\n  \"value\": crPositionStatusCode\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R008 - Active Restructured Loan In Other Bank Check\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        80
+      ],
+      "id": "fa1ebd08-3296-4fd1-99d9-fb462b325d39",
+      "name": "R008 - Active Restructured Loan In Other Bank Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crPositionBalance = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris.accounts.account.sub_accounts.sub_account.cr_positions.cr_position[0].balance;\n\nconst crPositionBalanceNumber = Number(crPositionBalance);\n\nconst crPositionStatusCode = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris.accounts.account.sub_accounts.sub_account.cr_positions.cr_position[0].status.code;\n\nconst passed = !(crPositionBalanceNumber > 0 && crPositionStatusCode === 'W');\nconst reason = passed ? null : \"Write-off exists within 3 years\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"crPositionBalance\",\n  \"value\": crPositionBalance\n})\n\nmetadata.push({\n  \"key\": \"crPositionStatusCode\",\n  \"value\": crPositionStatusCode\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R009 - Write-Off Record in Last 3 Years\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        280
+      ],
+      "id": "c3aafc05-9c3f-4d92-91cd-54d58a99d3ca",
+      "name": "R009 - Write-Off Record in Last 3 Years"
+    },
+    {
+      "parameters": {
+        "jsCode": "const bankruptcyDataExists = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_d.data === 'true';\nvar bankruptcyDateRaw = null;\nvar bankruptcyDate = null;\nvar bankruptcyStatus = null;\nvar bankruptcyOlderThanFiveYears = null;\n\n\nif(bankruptcyDataExists) {\n  bankruptcyStatus = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_d.record.status;\n  bankruptcyDateRaw = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_d.record.notice.date;\n  const bankruptcyDate = new Date(bankruptcyDateRaw);\n  const fiveYearsAgo = new Date();\n  fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);\n  bankruptcyOlderThanFiveYears = bankruptcyDate < fiveYearsAgo;\n} \n\nconst passed = !(bankruptcyDataExists) ||  (bankruptcyStatus === '1' && bankruptcyOlderThanFiveYears);\nconst reason = passed ? null : \"Bankruptcy in last 5 years\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"bankruptcyDataExists\",\n  \"value\": bankruptcyDataExists\n})\n\nmetadata.push({\n  \"key\": \"bankruptcyStatus\",\n  \"value\": bankruptcyStatus\n})\n\nmetadata.push({\n  \"key\": \"bankruptcyDate\",\n  \"value\": bankruptcyDate\n})\n\nmetadata.push({\n  \"key\": \"bankruptcyOlderThanFiveYears\",\n  \"value\": bankruptcyOlderThanFiveYears\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R010 - Bankruptcy Record in Last 5 Years\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        460
+      ],
+      "id": "87bf89ea-f671-494d-8c06-421c2bdcbeb9",
+      "name": "R010 - Bankruptcy Record in Last 5 Years"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crPositions = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris.accounts.account.sub_accounts.sub_account.cr_positions.cr_position;\n\nconst compareAmount = 250;\nconst statusCodes = ['O', 'T', 'C', 'G', 'K', 'J', 'L'];\nconst sixMonthsAgo = new Date();\nsixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);\n\nvar instArrearsCount = 0;\n\nfor(var i = 0; i < crPositions.length; i++) {\n  var crPosition = crPositions[i];\n  if(Number(crPosition.inst_arrears) === 1 && new Date(crPosition.position_date) > sixMonthsAgo && new Number(crPosition.inst_amount) > compareAmount && statusCodes.includes(crPosition.status.code)) {\n    instArrearsCount++;\n  }\n}\n\nconst passed = instArrearsCount < 3;\nconst reason = passed ? null : \"More than 2 counts of 30 DPD in 6 months more than RM250\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"double30DpdCountPastSixMonths\",\n  \"value\": instArrearsCount\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R012 - >RM250>2x 30 DPD in the last 6 months check\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        840
+      ],
+      "id": "699264d5-a4f4-479e-9391-80d32d3815d9",
+      "name": "R012 - >RM250>2x 30 DPD in the last 6 months check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crPositions = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris.accounts.account.sub_accounts.sub_account.cr_positions.cr_position;\n\nconst compareAmount = 250;\nconst statusCodes = ['O', 'T', 'C', 'G', 'K', 'J', 'L'];\nconst twelveMonthsAgo = new Date();\ntwelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);\n\nvar instArrearsCount = 0;\n\nfor(var i = 0; i < crPositions.length; i++) {\n  var crPosition = crPositions[i];\n  if(Number(crPosition.inst_arrears) === 2 && new Date(crPosition.position_date) > twelveMonthsAgo && new Number(crPosition.inst_amount) > compareAmount && statusCodes.includes(crPosition.status.code)) {\n    instArrearsCount++;\n  }\n}\n\nconst passed = instArrearsCount < 3;\nconst reason = passed ? null : \"More than 2 counts of 60 DPD in 12 months more than RM250\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"double60DpdCountPastTwelveMonths\",\n  \"value\": instArrearsCount\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R013 - >RM250>2x 60 DPD in the last 12 months check\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        1040
+      ],
+      "id": "3839dc82-a5d0-4e1f-84b2-638f2848f740",
+      "name": "R013 - >RM250>2x 60 DPD in the last 12 months check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crPositions = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris.accounts.account.sub_accounts.sub_account.cr_positions.cr_position;\n\nconst compareAmount = 250;\nconst statusCodes = ['O', 'T', 'C', 'G', 'K', 'J', 'L'];\nconst sixMonthsAgo = new Date();\nsixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);\n\nvar instArrearsCount = 0;\n\nfor(var i = 0; i < crPositions.length; i++) {\n  var crPosition = crPositions[i];\n  if(Number(crPosition.inst_arrears) === 2 && new Date(crPosition.position_date) > sixMonthsAgo && new Number(crPosition.inst_amount) > compareAmount && statusCodes.includes(crPosition.status.code)) {\n    instArrearsCount++;\n  }\n}\n\nconst passed = instArrearsCount < 1;\nconst reason = passed ? null : \"60 DPD occurred in 6 months more than RM250 exists\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"single60DpdCountPastSixMonths\",\n  \"value\": instArrearsCount\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R014 - >RM250>60 DPD in the last 6 months check\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        1220
+      ],
+      "id": "0ce08b3a-9870-4877-a258-8673a5ece49a",
+      "name": "R014 - >RM250>60 DPD in the last 6 months check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crPositions = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris.accounts.account.sub_accounts.sub_account.cr_positions.cr_position;\n\nconst compareAmount = 250;\nconst statusCodes = ['O', 'T', 'C', 'G', 'K', 'J', 'L'];\nconst twelveMonthsAgo = new Date();\ntwelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);\n\nvar instArrearsCount = 0;\n\nfor(var i = 0; i < crPositions.length; i++) {\n  var crPosition = crPositions[i];\n  if(Number(crPosition.inst_arrears) === 3 && new Date(crPosition.position_date) > twelveMonthsAgo && new Number(crPosition.inst_amount) > compareAmount && statusCodes.includes(crPosition.status.code)) {\n    instArrearsCount++;\n  }\n}\n\nconst passed = instArrearsCount < 1;\nconst reason = passed ? null : \"90 DPD in last 12 months more than RM250 exists\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"single90DpdCountPastTwelveMonths\",\n  \"value\": instArrearsCount\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R015 - >RM250>90 DPD in the last 12 months check\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        1400
+      ],
+      "id": "02f054da-b6d7-437e-866d-6321e640a700",
+      "name": "R015 - >RM250>90 DPD in the last 12 months check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sixMonthsAgo = new Date();\nsixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);\n\nconst facilityCodes = [''];\n\nvar facilityCode = null;\nconst unsecuredInquiryCounts = Number($('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_summary.ccris.application.total);\n\nif(unsecuredInquiryCounts >  3) {\n  facilityCode = $('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.enquiry.section_ccris.derivatives.application.facility.code;\n\n}\n\nconst passed = unsecuredInquiryCounts < 4 && (facilityCode == null || !facilityCodes.includes(facilityCode));\nconst reason = passed ? null : \"More than 3 unsecured loan enquiries in 3 months\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"unsecuredInquiryCounts\",\n  \"value\": unsecuredInquiryCounts\n})\n\nmetadata.push({\n  \"key\": \"facilityCode\",\n  \"value\": facilityCode\n})\n\nreturn {\n  \"metadata\": metadata,\n  \"passed\": passed,\n  \"reason\": reason,\n  \"name\": \"R016 - >3 Unsecured inquiries in the last 3 months\"\n}\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6980,
+        1580
+      ],
+      "id": "4f98a369-f848-4601-ad19-b4df2b21ccb3",
+      "name": "R016 - >3 Unsecured inquiries in the last 3 months"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        880
+      ],
+      "id": "b3df569f-dcfa-4b66-afce-d46272c19bad",
+      "name": "R011"
+    },
+    {
+      "parameters": {
+        "jsCode": "var finalApproval = true;\nconst racCheckResults = [];\nconst allRejectionResults = [];\n\nfor(const r of $('Merge').all()) {\n  \n  racCheckResults.push({\n    name: r.json.name,\n    passed: r.json.passed,\n    rejectionReason: r.json.reason\n  });\n  \n  if(r.json.passed === false) {\n    finalApproval = false;\n    allRejectionResults.push(r.json.reason)\n  }\n}\n\nreturn {\n  \"decision\": finalApproval ? \"Approve\" : \"Reject\",\n  \"racCheckResults\": racCheckResults,\n  \"allRejectionResults\": allRejectionResults\n}\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8580,
+        1100
+      ],
+      "id": "e94ced24-3d5f-4469-b7a2-7fb03e109156",
+      "name": "Aggregate CTOS Validation Results"
+    },
+    {
+      "parameters": {
+        "numberInputs": 10
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        7720,
+        520
+      ],
+      "id": "f1a9bb0a-e1b3-43ad-93d3-673e40475dbd",
+      "name": "MergedChunk1"
+    },
+    {
+      "parameters": {
+        "numberInputs": 5
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        7720,
+        1600
+      ],
+      "id": "c02c3daa-387d-4f9f-a11a-56707b33e1ee",
+      "name": "MergedChunk2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        8200,
+        1060
+      ],
+      "id": "88bedb05-6ce9-48c6-b628-1b78ceb2f002",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const nationality = $('Webhook').item.json.body[0].nationality;\nconst passed = nationality === 'MYS';\nconst reason = passed ? null : \"Failed nationality check\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"nationality\",\n  \"value\": nationality\n})\n\nreturn {\n    \"metadata\": metadata,\n    \"passed\": passed,\n    \"reason\":  reason,\n    \"name\": \"R001 - Citizenship check\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -320
+      ],
+      "id": "e7fe3be8-5723-4f9c-ae3b-59ee618c64fe",
+      "name": "R001 - Citizenship Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const age = Number($('Webhook').item.json.body[0].age);\nconst passed = !(age < 21) && !(age > 60);\nconst reason = passed ? null : \"Failed age check\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"age\",\n  \"value\": age\n})\n\nreturn {\n    \"metadata\": metadata,\n    \"passed\": passed,\n    \"reason\":  reason,\n    \"name\": \"R002 - Age check\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        -140
+      ],
+      "id": "e6dd10eb-a6ab-48c0-8a48-d2bd049c5764",
+      "name": "R002 - Age check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incomeRangeMap = {\n  MI1: { label: \"Up to RM3,000\", min: 0, max: 3000 },\n  MI2: { label: \"RM3,001 - RM5,000\", min: 3001, max: 5000 },\n  MI3: { label: \"RM5,001 - RM8,000\", min: 5001, max: 8000 },\n  MI4: { label: \"RM8,001 - RM10,000\", min: 8001, max: 10000 },\n  MI5: { label: \"RM10,001 - RM15,000\", min: 10001, max: 15000 },\n  MI6: { label: \"RM15,001 - RM25,000\", min: 15001, max: 25000 },\n  MI7: { label: \"More than RM25,000\", min: 25001, max: Infinity }\n};\n\nconst monthlyIncome = $('Webhook').item.json.body[0].monthlyIncome;\nconst incomeInfo = incomeRangeMap[monthlyIncome];\n\nconst passed = true;\nconst reason = passed ? null : \"Failed Income check\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"monthlyIncome\",\n  \"value\": monthlyIncome\n})\n\nreturn {\n    \"metadata\": metadata,\n    \"passed\": passed,\n    \"reason\":  reason,\n    \"name\": \"R003 - Income check\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        60
+      ],
+      "id": "f389fc9d-bb7f-48ae-84af-a1bd6a33970a",
+      "name": "R003 - Income Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const employmentTypeMap = {\n  \"111\": \"Business owner\",\n  \"112\": \"Government servant\",\n  \"113\": \"Private sector employee\",\n  \"115\": \"Self-employed\",\n  \"120\": \"Unemployed - Never employed\",\n  \"120A\": \"Unemployed - Career break\",\n  \"201A\": \"Unemployed - Recent graduate\",\n  \"201\": \"Student\",\n  \"202\": \"Retiree\",\n  \"203\": \"House maker\"\n};\nconst employmentTypeInput = $('Webhook').item.json.body[0].employmentType;\n\nconst employmentType = employmentTypeMap[employmentTypeInput];\nconst passed = !employmentType.toLowerCase().includes(\"unemployed\");\n\nconst reason = passed ? null : \"Failed employment check\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"employmentType\",\n  \"value\": employmentType\n})\n\nreturn {\n    \"metadata\": metadata,\n    \"passed\": passed,\n    \"reason\":  reason,\n    \"name\": \"R004 - Employment check\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        240
+      ],
+      "id": "3d2347e9-061d-4b3b-ab08-71d61222e0d4",
+      "name": "R004 - Employment check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const residentCountry = $('Webhook').item.json.body[0].permanentAddress.country;\nconst passed = residentCountry === 'MYS';\nconst reason = passed ? null : \"Failed residency check\";\n\nconst metadata = [];\n\nmetadata.push({\n  \"key\": \"residentCountry\",\n  \"value\": residentCountry\n})\n\nreturn {\n    \"metadata\": metadata,\n    \"passed\": passed,\n    \"reason\":  reason,\n    \"name\": \"R005 - Residency check\"\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        440
+      ],
+      "id": "d9ceee20-2f12-4635-9ca2-2b9fce31c402",
+      "name": "R005 - Residency Check"
+    },
+    {
+      "parameters": {
+        "numberInputs": 5
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        180,
+        20
+      ],
+      "id": "84b5e48c-9b27-40e0-99d9-f39443cc1151",
+      "name": "MergedProfileChecks"
+    },
+    {
+      "parameters": {
+        "jsCode": "var profileCheckApproval = true;\nconst racCheckResults = [];\nconst allRejectionResults = [];\n\nfor(const r of $('MergedProfileChecks').all()) {\n  \n  racCheckResults.push({\n    name: r.json.name,\n    passed: r.json.passed,\n    rejectionReason: r.json.reason\n  });\n  \n  if(r.json.passed === false) {\n    profileCheckApproval = false;\n    allRejectionResults.push(r.json.reason)\n  }\n}\n\nreturn {\n  \"profileCheckApproval\": profileCheckApproval ? \"Approve\" : \"Reject\",\n  \"racCheckResults\": racCheckResults,\n  \"allRejectionResults\": allRejectionResults\n}\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        60
+      ],
+      "id": "4599802e-c0a6-4f75-98dd-81086fdcf9c0",
+      "name": "Aggregate Profile Check Results"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"decision\":\"{{ $('Aggregate Profile Check Results').item.json.profileCheckApproval }}\",\n  \"checks\": [\n    {\n      \"racCheckResults\": {{ $('Aggregate Profile Check Results').item.json.racCheckResults }}\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        -140
+      ],
+      "id": "4b98cb1e-0cb2-40d6-9070-7fd62a060ff2",
+      "name": "Set Response - Failed Profile Check"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"decision\":\"{{ $('Aggregate CTOS Validation Results').item.json.decision }}\",\n  \"checks\": [\n    {\n      \"racCheckResults\": {{ $('Aggregate CTOS Validation Results').item.json.racCheckResults }}\n    }\n  ],\n\"reports\": {\n      \"id\": \"{{$('Set Selected Report From Upload').first().json.selectedReport.json.report.enq_report.id}}\",\n      \"sourceName\": \"CTOS\",\n      \"data\": null\n    },\n\"pricing\": {\n    \"financingAmount\": 1499,\n    \"financingInterestRate\": [\n      {\n        \"tenure\": 1,\n        \"annualContractualInterestRate\": \"0.0\",\n        \"monthContractualInterestRate\": \"0.0\",\n        \"annualEffectiveInterestRate\": \"0.0\",\n        \"monthEffectiveInterestRate\": \"0.0\"\n      },\n      {\n        \"tenure\": 2,\n        \"annualContractualInterestRate\": \"0.05922000000\",\n        \"monthContractualInterestRate\": \"0.00493500000\",\n        \"annualEffectiveInterestRate\": \"0.23921308080\",\n        \"monthEffectiveInterestRate\": \"0.01993442340\"\n      },\n      {\n        \"tenure\": 3,\n        \"annualContractualInterestRate\": \"0.08868000000\",\n        \"monthContractualInterestRate\": \"0.00739000000\",\n        \"annualEffectiveInterestRate\": \"0.26802661200\",\n        \"monthEffectiveInterestRate\": \"0.02233555100\"\n      },\n      {\n        \"tenure\": 6,\n        \"annualContractualInterestRate\": \"0.12644000000\",\n        \"monthContractualInterestRate\": \"0.01053666667\",\n        \"annualEffectiveInterestRate\": \"0.30230599080\",\n        \"monthEffectiveInterestRate\": \"0.02519216590\"\n      },\n      {\n        \"tenure\": 9,\n        \"annualContractualInterestRate\": \"0.14152000000\",\n        \"monthContractualInterestRate\": \"0.01179333333\",\n        \"annualEffectiveInterestRate\": \"0.31324699560\",\n        \"monthEffectiveInterestRate\": \"0.02610391630\"\n      },\n      {\n        \"tenure\": 12,\n        \"annualContractualInterestRate\": \"0.14963000000\",\n        \"monthContractualInterestRate\": \"0.01246916667\",\n        \"annualEffectiveInterestRate\": \"0.31716381000\",\n        \"monthEffectiveInterestRate\": \"0.02643031750\"\n      }\n    ]\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8840,
+        1100
+      ],
+      "id": "a5a3efaf-94c7-4cf3-ad35-ead438b44282",
+      "name": "Set Response - RAC Check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "28e6435f-6142-4777-8f95-feb7f75fca74",
+              "leftValue": "={{ $('Aggregate Profile Check Results').item.json.profileCheckApproval  != 'Approve'}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        60
+      ],
+      "id": "4b284f3f-8494-4712-b9b2-3f1ef67f80d1",
+      "name": "If Profile Check Is Failing"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0a78dd6d-c6da-4358-9778-8b9b8065744a",
+              "leftValue": "={{ $('Webhook').first().json.body[0].reports.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        860,
+        160
+      ],
+      "id": "adb88aa0-17af-45e7-9033-1c9af3d779b1",
+      "name": "If report is not null"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        3400,
+        300
+      ],
+      "id": "88d66dee-91b9-4cea-9f48-081151c7eb81",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "var reportData\n\nif($('Merge1').first().json.selectedReport === null) {\n  return {\n    \"xml\": $('Webhook').first().json.body[0].reports\n  }\n} else {\n  return {\n    \"xml\": $('Merge Report XMLs')\n  }\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3700,
+        300
+      ],
+      "id": "092e27ec-ff40-4de6-9ea5-9b8b0115c545",
+      "name": "Merge Report Fields",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const { v7: uuidv7 } = require('uuid');\n\nreturn [{\n  json: {\n    id: uuidv7()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1080,
+        1960
+      ],
+      "id": "68c9bcf0-5b31-43a4-bc43-b154dcf9827e",
+      "name": "Generate v7 uuid"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "4Ocx1CxNacOnXKZN",
+          "mode": "list",
+          "cachedResultName": "Decode Multiple XML Report to JSON"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2440,
+        60
+      ],
+      "id": "1101facf-88e9-4d35-86dd-85b6b3923c7d",
+      "name": "Extract Upload Report"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ffc90a40-e66e-43a0-83ac-3f1ec56fa82d",
+              "name": "reportsXmlData",
+              "value": "={{$('Webhook').first().json.body[0].reports }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        700
+      ],
+      "id": "4b649f62-f5e7-428a-aaee-ffdc6137a921",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "const xmlArray = $('Webhook').first().json.body[0].reports;\n\nreturn xmlArray.map(xml => ({\n  json: {\n    xml\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1860,
+        60
+      ],
+      "id": "fbc3300d-0955-4223-b37c-6153ff1bdb3a",
+      "name": "Merged Report XMLs"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1034c177-baa6-4869-bd0c-cef4abc13ec7",
+              "name": "selectedReport",
+              "value": "={{ $json.report }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3700,
+        80
+      ],
+      "id": "03f6d1f4-cebd-46c3-a64c-fd28f20d4363",
+      "name": "Set Selected Report From Upload"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5536bc8c-cb8a-4586-bcba-1556d328664d",
+              "leftValue": "={{ $('Extract Upload Report').first().json.report.json.report.enq_report.header.enq_date }}",
+              "rightValue": "={{ $now.minus(30, 'days') }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "before"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2880,
+        60
+      ],
+      "id": "af05ba62-5ff3-4d2e-93a4-5fb5fce528da",
+      "name": "If report is > 30 days"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "zsbzKROEKDye83ke",
+          "mode": "list",
+          "cachedResultName": "Decode Single XML Report to JSON"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3920,
+        520
+      ],
+      "id": "21774dd5-ec0f-4aec-a82d-671aeee23c4f",
+      "name": "Execute Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\n\nconst entityIds = [];\n\nif($('Execute Workflow').first().json.report.enq_report?.entities && $('Execute Workflow').first().json.report.enq_report.entities.subject.entity.length > 1) {\n  $('Execute Workflow').first().json.report.enq_report.entities.subject.entity.forEach(e => {\n    entityIds.push(e.key);\n  })\n} else {\n  return {\n    \"selectedReport\": $('Execute Workflow').first().json.report\n  }\n}\n\nreturn {\n  \"entityIds\" : entityIds\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4200,
+        520
+      ],
+      "id": "ba9cac15-73de-476c-81a6-ddb2c32166cc",
+      "name": "Extract Multiple Entities if Exists"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"decision\": \"Reject\",\n  \"reason\": \"Report not exists\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        260
+      ],
+      "id": "dc71b394-eead-4e00-be0d-d26022b4361d",
+      "name": "Respond Report Not Exists"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"decision\": \"Reject\",\n  \"reason\": \"Report older than 30 days\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        3360,
+        -200
+      ],
+      "id": "021bd977-8a11-4196-b68f-3cc9ceec99e6",
+      "name": "Respond Report Older than 30 days"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "R002 - Age check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R001 - Citizenship Check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R003 - Income Check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R004 - Employment check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R005 - Residency Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Login CTOS": {
+      "main": [
+        [
+          {
+            "node": "Get Individual Report from CTOS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Individual Report from CTOS": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculation Rule": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Signed JWT": {
+      "main": [
+        [
+          {
+            "node": "Login CTOS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        []
+      ]
+    },
+    "R006 - Debt Service Ratio Eligibility Check": {
+      "main": [
+        []
+      ]
+    },
+    "R007 - Other Bank Credit Status 1+DPD Check": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "R008 - Active Restructured Loan In Other Bank Check": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk1",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "R010 - Bankruptcy Record in Last 5 Years": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk1",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "R011": {
+      "main": [
+        []
+      ]
+    },
+    "R009 - Write-Off Record in Last 3 Years": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk1",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "R012 - >RM250>2x 30 DPD in the last 6 months check": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk1",
+            "type": "main",
+            "index": 6
+          }
+        ]
+      ]
+    },
+    "R013 - >RM250>2x 60 DPD in the last 12 months check": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk1",
+            "type": "main",
+            "index": 7
+          }
+        ]
+      ]
+    },
+    "R014 - >RM250>60 DPD in the last 6 months check": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk1",
+            "type": "main",
+            "index": 8
+          }
+        ]
+      ]
+    },
+    "R015 - >RM250>90 DPD in the last 12 months check": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk1",
+            "type": "main",
+            "index": 9
+          }
+        ]
+      ]
+    },
+    "R016 - >3 Unsecured inquiries in the last 3 months": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "R017 - CTOS Score Threshold": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "R018 - Legal Status Check": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk2",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "R019 - Special Attention Account Check": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk2",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "R020 - Net Remaining Income": {
+      "main": [
+        [
+          {
+            "node": "MergedChunk2",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "MergedChunk1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MergedChunk2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate CTOS Validation Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate CTOS Validation Results": {
+      "main": [
+        [
+          {
+            "node": "Set Response - RAC Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "R001 - Citizenship Check": {
+      "main": [
+        [
+          {
+            "node": "MergedProfileChecks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "R002 - Age check": {
+      "main": [
+        [
+          {
+            "node": "MergedProfileChecks",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "R003 - Income Check": {
+      "main": [
+        [
+          {
+            "node": "MergedProfileChecks",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "R004 - Employment check": {
+      "main": [
+        [
+          {
+            "node": "MergedProfileChecks",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "R005 - Residency Check": {
+      "main": [
+        [
+          {
+            "node": "MergedProfileChecks",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "MergedProfileChecks": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Profile Check Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Profile Check Results": {
+      "main": [
+        [
+          {
+            "node": "If Profile Check Is Failing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Response - Failed Profile Check": {
+      "main": [
+        [
+          {
+            "node": "Respond Failed Profile Rules Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Response - RAC Check": {
+      "main": [
+        [
+          {
+            "node": "Respond Credit Rules Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Profile Check Is Failing": {
+      "main": [
+        [
+          {
+            "node": "Set Response - Failed Profile Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If report is not null",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If report is not null": {
+      "main": [
+        [
+          {
+            "node": "Merged Report XMLs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Report Not Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Merge Report Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Report Fields": {
+      "main": [
+        []
+      ]
+    },
+    "Extract Upload Report": {
+      "main": [
+        [
+          {
+            "node": "If report is > 30 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        []
+      ]
+    },
+    "Merged Report XMLs": {
+      "main": [
+        [
+          {
+            "node": "Extract Upload Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Selected Report From Upload": {
+      "main": [
+        [
+          {
+            "node": "R007 - Other Bank Credit Status 1+DPD Check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R008 - Active Restructured Loan In Other Bank Check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R009 - Write-Off Record in Last 3 Years",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R010 - Bankruptcy Record in Last 5 Years",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R012 - >RM250>2x 30 DPD in the last 6 months check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R013 - >RM250>2x 60 DPD in the last 12 months check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R014 - >RM250>60 DPD in the last 6 months check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R015 - >RM250>90 DPD in the last 12 months check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R016 - >3 Unsecured inquiries in the last 3 months",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R017 - CTOS Score Threshold",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R020 - Net Remaining Income",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R018 - Legal Status Check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "R019 - Special Attention Account Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If report is > 30 days": {
+      "main": [
+        [
+          {
+            "node": "Respond Report Older than 30 days",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Selected Report From Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow": {
+      "main": [
+        [
+          {
+            "node": "Extract Multiple Entities if Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Multiple Entities if Exists": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "66243390-cc7c-4d39-b799-68d1f8c72463",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "152db35048a6415f43aaf22403e7753318527c68bc2c708a38238c9bf941474b"
+  },
+  "id": "DfK2Fjj6EFGkAnT6",
+  "tags": []
+}

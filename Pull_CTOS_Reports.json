@@ -1,0 +1,458 @@
+{
+  "name": "Pull CTOS Reports",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://uat-sso.ctos.com.my/auth/realms/CTOSNET/protocol/openid-connect/token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "text/xml"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "password"
+            },
+            {
+              "name": "client_id",
+              "value": "Ryt2_jwt"
+            },
+            {
+              "name": "username",
+              "value": "ryt2_uat"
+            },
+            {
+              "name": "password",
+              "value": "Ryt2b@nk_2025"
+            },
+            {
+              "name": "client_assertion_type",
+              "value": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+            },
+            {
+              "name": "client_assertion",
+              "value": "={{ $json.stdout }}"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        280,
+        0
+      ],
+      "id": "10532b84-aa17-4080-b783-a0628cc42b4a",
+      "name": "Login CTOS"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://uat-integration.ctos.com.my/ctos_secure/Proxy",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/xml",
+        "body": "=<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ws=\"http://ws.proxy.xml.ctos.com.my/\">\n\n   <soapenv:Header/>\n\n   <soapenv:Body>\n\n      <ws:request>\n\n         <!--Optional:-->\n\n         <input>\n\n&lt;batch output=&apos;0&apos; no=&apos;061128&apos; xmlns=&apos;http://ws.cmctos.com.my/ctosnet/request&apos;&gt;\n\n&lt;company_code&gt;RYT2UAT&lt;/company_code&gt;\n\n&lt;account_no&gt;RYT2UAT&lt;/account_no&gt;\n\n&lt;user_id&gt;ryt2_uat&lt;/user_id&gt;\n\n &lt;record_total&gt;1&lt;/record_total&gt;\n\n&lt;records&gt;\n\n&lt;type code=&quot;11&quot;&gt;I&lt;/type&gt;\n\n&lt;ic_lc&gt;&lt;/ic_lc&gt;\n\n&lt;nic_br&gt;{{ $('Webhook').first().json.body[0].idNumber }}&lt;/nic_br&gt;\n\n    &lt;name&gt;{{ $('Webhook').first().json.body[0].fullName }}&lt;/name&gt;\n\n    &lt;mphone_nos/&gt;\n\n    &lt;ref_no&gt;061128&lt;/ref_no&gt;\n\n    &lt;purpose code=&apos;200&apos;&gt;Credit evaluation/account opening on subject/directors/shareholder with consent /due diligence on AMLA compliance&lt;/purpose&gt;\n\n    &lt;include_ccris sum=&quot;0&quot;&gt;1&lt;/include_ccris&gt;\n\n    &lt;include_ctos&gt;1&lt;/include_ctos&gt;\n\n    &lt;include_ccris_supp&gt;1&lt;/include_ccris_supp&gt;\n\n    &lt;include_dcheq&gt;0&lt;/include_dcheq&gt;  \n\n    &lt;include_ssm&gt;0&lt;/include_ssm&gt;\n\n    &lt;include_trex&gt;1&lt;/include_trex&gt;\n\n    &lt;include_fico&gt;1&lt;/include_fico&gt;\n\n    &lt;include_ci&gt;0&lt;/include_ci&gt;\n\n    &lt;include_ie&gt;1&lt;/include_ie&gt;\n\n    &lt;include_etr_plus&gt;0&lt;/include_etr_plus&gt;\n\n    &lt;include_consent&gt;0&lt;/include_consent&gt;\n\n    &lt;include_angkasa&gt;0&lt;/include_angkasa&gt;\n\n    &lt;include_sfi&gt;0&lt;/include_sfi&gt;\n\n    &lt;confirm_entity&gt;&lt;/confirm_entity&gt;\n\n  &lt;/records&gt;\n\n&lt;/batch&gt;\n\n        </input>\n\n      </ws:request>\n\n   </soapenv:Body>\n\n</soapenv:Envelope>",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "id": "0051b43a-182a-460c-8a44-be503a8cccb1",
+      "name": "Get Individual Report from CTOS"
+    },
+    {
+      "parameters": {
+        "command": "sh /home/node/scripts/generate-jwt.sh"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "51b1eff4-2321-4474-8cc7-d8f5ee7aaac7",
+      "name": "Generate Signed JWT"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "zsbzKROEKDye83ke",
+          "mode": "list",
+          "cachedResultName": "Decode Single XML Report to JSON"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        840,
+        0
+      ],
+      "id": "f1e91183-22f3-40a9-84db-83071b1178f7",
+      "name": "Execute Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\n\nconst entityIds = [];\n\nif($('Execute Workflow').first().json.report.enq_report?.entities && $('Execute Workflow').first().json.report.enq_report.entities.subject.entity.length > 1) {\n  $('Execute Workflow').first().json.report.enq_report.entities.subject.entity.forEach(e => {\n    entityIds.push(\n      {\n        \"entitiyId\": e.key\n      }\n    );\n  })\n} else {\n  entityIds.push(\n    {\n        \"entitiyId\": null\n      }\n  )\n}\n\nreturn entityIds.map(item => ({json: item}))\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "283b0551-3019-48bd-b6a9-4735c9a97346",
+      "name": "Extract Multiple Entities if Exists"
+    },
+    {
+      "parameters": {
+        "path": "4d8c0932-2d2c-4284-83a3-b788c6676915",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        0
+      ],
+      "id": "0f246314-d636-431d-a218-6993582c10ba",
+      "name": "Webhook",
+      "webhookId": "4d8c0932-2d2c-4284-83a3-b788c6676915"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0e70f159-0927-4b5f-aa47-6312d973eeb9",
+              "name": "reports",
+              "value": "=[\"{{ $('Get Individual Report from CTOS').item.json.data }}\"]",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1560,
+        -100
+      ],
+      "id": "394424aa-b1f3-4e5f-9173-47fb5c400924",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "10d9871f-50c9-41d7-8413-1d8d7550234e",
+              "leftValue": "={{ $('Extract Multiple Entities if Exists').first().json.entitiyId}}",
+              "rightValue": "null",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1340,
+        0
+      ],
+      "id": "4ff2fed9-0860-42da-b2ca-1f1be62cb6ed",
+      "name": "If entity has only 1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://uat-integration.ctos.com.my/ctos_secure/Proxy",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Login CTOS').first().json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/xml",
+        "body": "=<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ws=\"http://ws.proxy.xml.ctos.com.my/\">\n\n   <soapenv:Header/>\n\n   <soapenv:Body>\n\n      <ws:request>\n\n         <!--Optional:-->\n\n         <input>\n\n&lt;batch output=&apos;0&apos; no=&apos;061128&apos; xmlns=&apos;http://ws.cmctos.com.my/ctosnet/request&apos;&gt;\n\n&lt;company_code&gt;RYT2UAT&lt;/company_code&gt;\n\n&lt;account_no&gt;RYT2UAT&lt;/account_no&gt;\n\n&lt;user_id&gt;ryt2_uat&lt;/user_id&gt;\n\n &lt;record_total&gt;1&lt;/record_total&gt;\n\n&lt;records&gt;\n\n&lt;type code=&quot;11&quot;&gt;I&lt;/type&gt;\n\n&lt;ic_lc&gt;&lt;/ic_lc&gt;\n\n&lt;nic_br&gt;{{ $('Webhook').first().json.body[0].idNumber }}&lt;/nic_br&gt;\n\n    &lt;name&gt;{{ $('Webhook').first().json.body[0].fullName }}&lt;/name&gt;\n\n    &lt;mphone_nos/&gt;\n\n    &lt;ref_no&gt;061128&lt;/ref_no&gt;\n\n    &lt;purpose code=&apos;200&apos;&gt;Credit evaluation/account opening on subject/directors/shareholder with consent /due diligence on AMLA compliance&lt;/purpose&gt;\n\n    &lt;include_ccris sum=&quot;0&quot;&gt;1&lt;/include_ccris&gt;\n\n    &lt;include_ctos&gt;1&lt;/include_ctos&gt;\n\n    &lt;include_ccris_supp&gt;1&lt;/include_ccris_supp&gt;\n\n    &lt;include_dcheq&gt;0&lt;/include_dcheq&gt;  \n\n    &lt;include_ssm&gt;0&lt;/include_ssm&gt;\n\n    &lt;include_trex&gt;1&lt;/include_trex&gt;\n\n    &lt;include_fico&gt;1&lt;/include_fico&gt;\n\n    &lt;include_ci&gt;0&lt;/include_ci&gt;\n\n    &lt;include_ie&gt;1&lt;/include_ie&gt;\n\n    &lt;include_etr_plus&gt;0&lt;/include_etr_plus&gt;\n\n    &lt;include_consent&gt;0&lt;/include_consent&gt;\n\n    &lt;include_angkasa&gt;0&lt;/include_angkasa&gt;\n\n    &lt;include_sfi&gt;0&lt;/include_sfi&gt;\n\n    &lt;confirm_entity&gt;{{$json.entityId}}&lt;/confirm_entity&gt;\n\n  &lt;/records&gt;\n\n&lt;/batch&gt;\n\n        </input>\n\n      </ws:request>\n\n   </soapenv:Body>\n\n</soapenv:Envelope>",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        260
+      ],
+      "id": "dc7828b4-02d0-4b40-a9c3-9a71c0bf8e35",
+      "name": "Get Multiple Report from CTOS1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dbfa2fb5-f6d4-46bc-8898-b6854b328bc2",
+              "name": "reports",
+              "value": "={{ $json.data }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1780,
+        260
+      ],
+      "id": "88fe7284-c458-4df4-81c0-96217f71c8a2",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems =$('Edit Fields1').all().map(item => item.json);\n\nreturn {\n    \"report\": allItems\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        260
+      ],
+      "id": "23940412-bc12-43c7-822b-a97c7576f23d",
+      "name": "Merge Reports"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$('Merge Reports').item.json}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        2260,
+        260
+      ],
+      "id": "801510a7-24ff-4438-8c2b-912a3071893b",
+      "name": "Respond Multiple Reports"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        1780,
+        -100
+      ],
+      "id": "8acf5391-35d0-4718-9239-c1bf89f3e49a",
+      "name": "Respond to Single Report"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Login CTOS": {
+      "main": [
+        [
+          {
+            "node": "Get Individual Report from CTOS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Individual Report from CTOS": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Signed JWT": {
+      "main": [
+        [
+          {
+            "node": "Login CTOS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow": {
+      "main": [
+        [
+          {
+            "node": "Extract Multiple Entities if Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Generate Signed JWT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Multiple Entities if Exists": {
+      "main": [
+        [
+          {
+            "node": "If entity has only 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Single Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If entity has only 1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Multiple Report from CTOS1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Multiple Report from CTOS1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge Reports",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Reports": {
+      "main": [
+        [
+          {
+            "node": "Respond Multiple Reports",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "95564432-367d-40e9-bfa4-1feed320943c",
+  "meta": {
+    "instanceId": "152db35048a6415f43aaf22403e7753318527c68bc2c708a38238c9bf941474b"
+  },
+  "id": "4a5j79jZ7BLSCYtz",
+  "tags": []
+}

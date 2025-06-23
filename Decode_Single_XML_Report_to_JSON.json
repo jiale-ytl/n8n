@@ -1,0 +1,139 @@
+{
+  "name": "Decode Single XML Report to JSON",
+  "nodes": [
+    {
+      "parameters": {
+        "dataPropertyName": "=data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        -280,
+        -80
+      ],
+      "id": "aeca352b-f1cb-4d0a-b552-f9031d7c1f0a",
+      "name": "XML"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "011b887f-715c-4fb8-8456-cfc66782b577",
+              "name": "encodedReport",
+              "value": "={{ $json['S:Envelope']['S:Body']['ns2:requestResponse'].return }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -80,
+        -80
+      ],
+      "id": "7451d3eb-8ee7-40e7-982e-0c468a7df17a",
+      "name": "Extract Report Field"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all(); // returns an array of all input items\nvar decodedHtml;\nitems.map(item => {\n\n  if (item.json.encodedReport) {\n    decodedHtml = Buffer.from(item.json.encodedReport, 'base64').toString('utf-8');\n\n    item.json.decodedReport = decodedHtml;\n  }  \n});\n\n\n\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        -80
+      ],
+      "id": "02031125-1f18-432d-ba5d-8b64f86616b6",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "dataPropertyName": "decodedReport",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        340,
+        -80
+      ],
+      "id": "13a187ef-346a-4c9e-beb7-a8de1ba4d342",
+      "name": "Raw Report to JSON"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -520,
+        -80
+      ],
+      "id": "2cb3a443-626e-4e9b-adb4-758cd6680655",
+      "name": "When Executed by Another Workflow"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "XML": {
+      "main": [
+        [
+          {
+            "node": "Extract Report Field",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Report Field": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Raw Report to JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3d13821e-c2d2-4b43-bf48-b7a7ae8dfa0d",
+  "meta": {
+    "instanceId": "152db35048a6415f43aaf22403e7753318527c68bc2c708a38238c9bf941474b"
+  },
+  "id": "zsbzKROEKDye83ke",
+  "tags": []
+}
