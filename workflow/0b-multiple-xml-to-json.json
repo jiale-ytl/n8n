@@ -1,0 +1,260 @@
+{
+  "name": "Decode Multiple XML Report to JSON",
+  "nodes": [
+    {
+      "parameters": {
+        "dataPropertyName": "=reportData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        2900,
+        1320
+      ],
+      "id": "14d55792-a6a8-45c8-b247-0fd2ca57a9c3",
+      "name": "XML"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "011b887f-715c-4fb8-8456-cfc66782b577",
+              "name": "encodedReport",
+              "value": "={{ $json['S:Envelope']['S:Body']['ns2:requestResponse'].return }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3100,
+        1320
+      ],
+      "id": "dd604f06-1777-491c-b5e5-acc885e488a0",
+      "name": "Extract Report Field"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all(); // returns an array of all input items\nvar decodedHtml;\nitems.map(item => {\n\n  if (item.json.encodedReport) {\n    decodedHtml = Buffer.from(item.json.encodedReport, 'base64').toString('utf-8');\n\n    item.json.decodedReport = decodedHtml;\n  }  \n});\n\n\n\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        1320
+      ],
+      "id": "be6fb467-5d82-460c-a717-0ac1f51a848d",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "dataPropertyName": "decodedReport",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        3500,
+        1320
+      ],
+      "id": "dafef33a-e1da-43f8-a0e5-01b7c9d39170",
+      "name": "Raw Report to JSON"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        2500,
+        1320
+      ],
+      "id": "274a4e72-a156-4deb-88e8-f1da18810770",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "const reports = $('Raw Report to JSON1').all();\n\nvar amount = 0;\nvar selectedReport = null;\n\n\nreports.forEach(r => {\n  var sumAmount = 0;\n  var sectionCcris = r.json.report.enq_report.enquiry?.section_ccris;\n\n  if(sectionCcris) {\nsectionCcris.accounts.account.sub_accounts.sub_account.cr_positions.cr_position.forEach(crp => {sumAmount = sumAmount + crp.inst_amount;})\n    }\n    \n    \n  \n  \n  if(sumAmount > amount) {\n    amount = sumAmount\n    selectedReport = r;\n  }\n})\n\nreturn {\n  \"report\": selectedReport\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4000,
+        1620
+      ],
+      "id": "4c6df289-55ab-4e80-9334-d926a965ee7a",
+      "name": "Select Report"
+    },
+    {
+      "parameters": {
+        "dataPropertyName": "=xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        3100,
+        1620
+      ],
+      "id": "b203f01f-e002-4e8e-9f60-a1c7a2fa132c",
+      "name": "XML1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "011b887f-715c-4fb8-8456-cfc66782b577",
+              "name": "encodedReport",
+              "value": "={{ $json['S:Envelope']['S:Body']['ns2:requestResponse'].return }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3320,
+        1620
+      ],
+      "id": "ca95556d-2580-4365-b9fd-371acefb847e",
+      "name": "Extract Report Field1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all(); // returns an array of all input items\nvar decodedHtml;\nitems.map(item => {\n\n  if (item.json.encodedReport) {\n    decodedHtml = Buffer.from(item.json.encodedReport, 'base64').toString('utf-8');\n\n    item.json.decodedReport = decodedHtml;\n  }  \n});\n\n\n\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3540,
+        1620
+      ],
+      "id": "26702a62-9032-4067-92ad-04f1d7b03cbf",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "dataPropertyName": "decodedReport",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        3760,
+        1620
+      ],
+      "id": "c27dc543-9869-4d16-84a1-3f4fbcd93724",
+      "name": "Raw Report to JSON1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "XML": {
+      "main": [
+        [
+          {
+            "node": "Extract Report Field",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Report Field": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Raw Report to JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "XML1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML1": {
+      "main": [
+        [
+          {
+            "node": "Extract Report Field1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Report Field1": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Raw Report to JSON1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Raw Report to JSON1": {
+      "main": [
+        [
+          {
+            "node": "Select Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c308c410-1c0d-4ca5-b5ee-7d108fb89668",
+  "meta": {
+    "instanceId": "152db35048a6415f43aaf22403e7753318527c68bc2c708a38238c9bf941474b"
+  },
+  "id": "4Ocx1CxNacOnXKZN",
+  "tags": []
+}

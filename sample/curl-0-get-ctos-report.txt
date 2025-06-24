@@ -1,0 +1,8 @@
+curl --location --request GET 'http://localhost:5678/webhook-test/4d8c0932-2d2c-4284-83a3-b788c6676915' \
+--header 'Content-Type: application/json' \
+--data '[
+    {
+        "fullName": "SYERA",
+        "idNumber": "880309016128"
+    }
+]'
